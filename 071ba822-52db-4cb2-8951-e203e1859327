@@ -1,0 +1,394 @@
+
+
+
+
+
+
+
+
+
+
+
+                        <script>
+
+
+	var scene_index = 0;
+	var correctAnswer = "A";
+  	function handleResponse(response) {
+		var params;
+		
+    	if (!response)
+            response = [];
+
+    	//check whether there is an valid commands to process
+    	for(var i=0; i < response.length; i++){
+			params = response[i].params;
+        	switch(response[i]['cmd']){
+        		case "sfinishGame":
+                	drawResult(params.scores);
+                	break;
+        		case "sstartGame":
+					scene_index = 0;
+					$("#player1-name").html(params.players.creatorID);
+					$("#player1-score").html("0");
+					$("#player2-name").html(params.players.devID);
+					$("#player2-score").html("0");
+				case "getNextScene":
+					var puzzle = {
+					    "type" : params.scene.sceneType,
+						"url": params.scene.imageUrl,
+						"options": params.scene.options,
+						"answer": params.scene.answer,
+					};
+					if (params.scene.poster)
+						puzzle['poster'] = params.scene.poster;
+					
+					correctAnswer = params.scene.answer;
+					console.log(JSON.stringify(puzzle));
+
+					if (+params.index >= 9)
+						$("#description").html((+params.index +1) + ": " + params.scene.description);
+					else
+						$("#description").html("0" + (+params.index +1) + ": " + params.scene.description);
+
+					drawPuzzle(puzzle);
+					//var timer = setTimeout("updateScore()", 5000);
+					//var timer = setTimeout("drawResult()", 5000);
+
+					break;
+				case "supdateScore":
+					var score = {};
+					 var idx = 0;
+					 for (var player in params.scores){
+						 if (idx == 0) {
+	 					 	score['player1'] = player;
+	 						score['score1'] = params.scores[player];
+						 } else {
+	 					 	score['player2'] = player;
+	 						score['score2'] = params.scores[player];
+						 }
+						 idx++;
+					 }
+					score['answer'] = correctAnswer;
+					updateScore(score, params.index);
+					break;
+        		default:
+               		//do nothing
+        	}
+		}
+  	}   
+	  
+	window.onload = onLoad;
+
+	/**
+	* Initializes the receiver application and game objects, and starts the
+	* receiver.
+	*/
+	function onLoad() {
+		// Turn on debugging so that you can see what is going on.  Please turn this off
+		// on your production receivers.  Especially if there may be any personally
+		// identifiable information in the log.
+		    cast.receiver.logger.setLevelValue(cast.receiver.LoggerLevel.DEBUG);
+
+		    console.log('Starting media application');
+		    window.mediaElement = document.getElementById('vid');
+		// Create the media manager. This will handle all media messages by default.
+		    window.mediaManager = new cast.receiver.MediaManager(window.mediaElement);
+
+		// Start the system
+		    console.log('Application is ready, starting system');
+		    window.castReceiverManager = cast.receiver.CastReceiverManager.getInstance();
+
+                    window.castMessageBus = window.castReceiverManager.getCastMessageBus('urn:x-cast:com.marvell.kinoma.charades');
+                    window.castMessageBus.onMessage = function (messages) {
+                        //Tell the server our name
+						myMessage = new jMessage(handleResponse, {"historyCmdListID" : 'historyCmdList_disable'}, messages.data);
+                        myMessage.sendCmds();
+
+						//Save the gameID and show the Welcome
+						window.gameID = messages.data;
+						$("#gameID").html(window.gameID);
+						$("#welcome").show();
+
+                        console.log("sender send messages :" + messages.data);
+                    };
+
+		    castReceiverManager.onSenderDisconnected = function (event) {
+		      console.log("sender disconnected");
+		    };
+		// The default inactivity is normally 10 seconds, since we are encouraging you
+		// to debug this receiver, we are setting it to 10 minutes. As setting a break
+		// point might inadvertently trigger a timeout. The purpose of the timer is to
+		// speed the recognition of disconnection of a sender.  As the TCP/IP standard
+		// mechanisms can be quite slow.
+		    castReceiverManager.start({maxInactivity: 600});
+			
+		$("#welcome").hide();
+		$("#game").hide();
+		$("#result").hide();					
+							 
+		//myMessage = new jMessage(handleResponse, {"historyCmdListID" : 'historyCmdList'}, '1');
+		//myMessage.sendCmds();
+		
+		//getNext();
+		
+		//fakeLogin();
+		//videoTestTimeout();
+	}
+
+	function updateScore(score, index) {
+		$("#player1-name").html(score.player1);
+		$("#player1-score").html(score.score1);
+		$("#player2-name").html(score.player2);
+		$("#player2-score").html(score.score2);
+
+
+		$("#"+score.answer).attr("class", "options correct");
+
+		if (parseInt(index) >= scene_index) { 
+			setTimeout("getNext()", 1500);
+			//myMessage.updateDebugInfo("index: "+ index + "  scene_index:" + scene_index);
+		}
+		scene_index = parseInt(index) + 1;
+		
+		$(".player").animate({fontSize: '2.0em'}, 'fast');
+		$(".player").animate({fontSize: '1.8em'}, 'fast');
+	}
+
+	function drawPuzzle(puzzle) {
+		switch (puzzle.type) {
+			case "image": 
+				$("#image").attr("src", puzzle.url);
+				$("#video").hide();
+				$("#image").hide();
+				$("#image").fadeIn(2000);	
+				$("#video").get(0).pause();
+				break;
+
+			case "video":
+				$("#video").attr("src", puzzle.url);
+				$("#video").attr("poster", "");
+				$("#image").hide();
+				$("#video").show();
+				$("#video").get(0).play();				
+				break;
+			case "audio":
+				$("#video").attr("poster", puzzle.poster);
+				$("#video").hide();
+				$("#image").hide();
+				$("#video").fadeIn(2000);
+				$("#video").attr("src", puzzle.url);
+				$("#video").get(0).play();
+				break;
+			default:
+				return;
+		}
+
+		$("#A").attr("class", "options");
+		$("#B").attr("class", "options");
+		$("#C").attr("class", "options");
+		$("#D").attr("class", "options");
+
+
+		$("#textA").html(puzzle.options[0]);
+		$("#textB").html(puzzle.options[1]);
+		$("#textC").html(puzzle.options[2]);
+		$("#textD").html(puzzle.options[3]);
+
+		$("#result").hide();
+        $("#welcome").hide();
+        $("#game").show();
+	}
+
+	function drawResult (result) {
+		var idx = 0;
+		for (var player in result){
+			if (idx == 0) {
+				var player1= player;
+				var score1 = parseInt(result[player]);
+			} else {
+			 	var player2 = player;
+				var score2 = parseInt(result[player]);
+			}
+			idx++;
+		}
+
+		if (score1 == score2) {
+			$("#resultText").text("Game draw, try again!");
+		}
+		else {
+			var winner = "";
+			if (score1 > score2) {
+				winner = player1;
+			}
+			else {
+				winner = player2;
+			}
+			$("#resultText").text(winner + " Won!");
+		}
+		
+		$("#welcome").hide();
+		$("#game").hide();
+		$("#result").show();
+
+		$("#video").get(0).pause();
+	}
+
+	function getNext() {
+        myMessage.updateCommand('getNextScene', {"gameID": window.gameID});
+        myMessage.sendCmds();
+	}
+
+var gameList = [
+	{
+		"sceneType": "audio",
+		"poster": "resources/images/music.png",
+		"imageUrl":"resources/audio/16.mp3",
+		"options":[ "红豆", "思念", "我愿意", "朋友"],
+		"answer": "A",
+		"description": "听歌猜歌名",
+		"timeout": 30000
+	},
+	{
+		"sceneType": "video",
+		"imageUrl":"resources/videos/test1.mp4",
+		"options":[ "钢铁侠", "雷神", "复仇者联盟", "玩具总动员"],
+		"answer": "C",
+		"description": "看电影猜名字",
+		"timeout": 30000
+	},
+	{
+		"sceneType": "audio",
+		"poster": "resources/images/music.png",
+		"imageUrl":"resources/audio/17.mp3",
+		"options":[ "一路上有你", "红色凯旋门", "红色树叶", "莫斯科郊外的晚上"],
+		"answer": "D",
+		"description": "听歌猜歌名",
+		"timeout": 30000
+	},
+	{
+		"sceneType": "video",
+		"imageUrl":"resources/videos/test2.mp4",
+		"options":[ "钢铁侠", "雷神", "复仇者联盟", "玩具总动员"],
+		"answer": "D",
+		"description": "看电影猜名字",
+		"timeout": 30000
+	},
+	{
+		"sceneType": "image",
+		"imageUrl":"resources/images/D01-5.png",
+		"options": ["2", "3", "4", "5"],
+		"answer": "D",
+		"description": "图中几处不同",
+		"timeout": 60000
+	},
+	{
+		"sceneType": "audio",
+		"poster": "resources/images/music.png",
+		"imageUrl":"resources/audio/18.mp3",
+		"options":[ "龙的传人", "我们都是中国人", "中国人", "朋友珍重"],
+		"answer": "A",
+		"description": "听歌猜歌名",
+		"timeout": 30000
+	},
+	{
+		"sceneType": "video",
+		"imageUrl":"resources/videos/ironman.mp4",
+		"options":[ "钢铁侠", "雷神", "复仇者联盟", "玩具总动员"],
+		"answer": "A",
+		"description": "看电影猜名字",
+		"timeout": 30000
+	},
+	{
+		"sceneType": "video",
+		"imageUrl":"resources/videos/Thor.mp4",
+		"options":[ "钢铁侠", "雷神", "复仇者联盟", "玩具总动员"],
+		"answer": "B",
+		"description": "看电影猜名字",
+		"timeout": 30000
+	},
+	{
+		"sceneType": "video",
+		"imageUrl":"resources/videos/twlight.mp4",
+		"options":[ "千年之约", "暮色", "吸血鬼日记", "暮光之城"],
+		"answer": "D",
+		"description": "看电影猜名字",
+		"timeout": 30000
+	},
+];
+
+var testIndex = 0;	
+function videoTestTimeout() {
+	var scene = gameList[testIndex];
+	
+	var puzzle = {
+	    "type" : scene.sceneType,
+		"url": scene.imageUrl,
+		"options": scene.options,
+		"answer": scene.answer,
+		"poster": scene.poster,
+	};
+	
+	if (testIndex >= 9)
+		$("#description").html((testIndex +1) + ": " + scene.description);
+	else
+		$("#description").html("0" + (testIndex +1) + ": " + scene.description);
+
+	drawPuzzle(puzzle);
+	
+	testIndex++;
+	if (testIndex < gameList.length)
+		setTimeout("videoTestTimeout()", 20000);
+}
+
+function fakeLogin() {
+	$("#welcome").hide();
+	$("#game").show();
+	$("#result").hide();
+
+	var puzzle = {
+		"type": "video",
+		"url":"videos/test1.mp4",
+		"options":[ "钢铁侠",
+		"雷神",
+		"复仇者联盟",
+		"玩具总动员"
+		],
+	};
+
+	drawPuzzle(puzzle);
+}
+
+function fakeScore() {
+	$("#welcome").hide();
+	$("#game").show();
+	$("#result").hide();
+
+	var score = {
+		"player1": "Thor",
+		"score1":"9",
+		"player2": "Rocky",
+		"score2": "10",
+		"description": "看片猜电影",
+		"index": 6,
+	};
+
+    updateScore(score);
+}
+
+function fakeResult() {
+	$("#welcome").hide();
+	$("#game").hide();
+	$("#result").show();
+
+	var result = {
+		"Thor": "121",
+		"Rocky": "13",
+	};
+
+	drawResult(result);
+} 
+
+
+
+</script>
