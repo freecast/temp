@@ -1,0 +1,100 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<title>html5进度条</title>
+	<script type="text/javascript">
+		//在页面加载完毕后调用画进度条的函数
+		window.onload = function(){
+			progress();
+		};
+
+		//定义读取加载图片的下标
+		var loadSub = 0;
+		//定义等待加载图片的变量，让图片等一些时间后加载一张
+		var addTime = 0;
+		
+		//建立要加载的图片数组
+		var loadpic1 = "./item1.jpg";
+		var loadpic2 = "./item2.jpg";
+		var loadpic3 = "./item3.jpg";
+		var loadpic4 = "./item4.jpg";
+		var loadpic5 = "./item5.jpg";
+		var loadpic6 = "./item6.jpg";
+		var loadPicArr = [loadpic1, loadpic2, loadpic3, loadpic4, loadpic5, loadpic6];
+
+		//循环加载图片
+		for(var i=0; i<loadPicArr.length; i++){
+			var onloadPic = new Image();
+			onloadPic.src = loadPicArr[loadSub];
+ 			onloadPic.onload = function(){
+				setTimeout(function(){drawProgress();loadSub ++;}, 1000+addTime);
+				//增加等待时间，也就是说每加载一张就用等500ms
+				addTime+=500;
+ 			};
+		}
+
+		//显示进度条框架和文字
+		function progress(){
+			var pElem = document.getElementById("mycanvas");
+            var pCtx = pElem.getContext('2d');
+
+			//定义框架的样式
+			pCtx.beginPath();
+			pCtx.lineWidth = "5";
+			pCtx.strokeStyle = "dimgray";
+			pCtx.fillStyle = "lightgray";	
+			pCtx.lineJoin = "round";
+
+			//画矩形，长为550-250=300，宽为270-240=30
+			pCtx.moveTo(250, 240);
+			pCtx.lineTo(550, 240);
+			pCtx.lineTo(550, 270);
+			pCtx.lineTo(250, 270);
+
+			pCtx.closePath();
+			pCtx.fill();
+			pCtx.stroke();
+
+			//添加进度条的文字
+			pCtx.beginPath();
+			pCtx.lineWidth = "2";
+			pCtx.font = "bold 32pt Tahoma";
+            		pCtx.strokeText("loading……", 280, 200);
+			pCtx.fillStyle = "white";
+			pCtx.fill();
+            		pCtx.stroke();
+		}
+
+		//设定要开始画进度的X坐标
+		var startX = 252;
+		//设定没加载一张要画的长度
+		var addX = 296/loadPicArr.length;
+		var addtoX = startX;
+
+		//画出进度
+		function drawProgress(){
+			//增加进度长度
+			addtoX+=addX;
+	
+			var dElem = document.getElementById("mycanvas");
+            var dCtx = dElem.getContext('2d');
+			
+			//设定样式
+			dCtx.beginPath();
+			dCtx.lineWidth = "26";
+			dCtx.strokeStyle = "orange";
+			dCtx.lineJoin = "round";
+			//开始绘制
+			dCtx.moveTo(startX, 255);
+			dCtx.lineTo(addtoX, 255);
+			dCtx.stroke();
+		}
+    	</script>
+</head>
+
+<body>
+	<canvas id="mycanvas" width="800px" height="500px" style="border:10px solid #c3c3c3; z-index: 1;">
+		你的浏览器不支持html5。请下载支持html5的浏览器。谢谢！
+	</canvas>
+</body>
+</html>
